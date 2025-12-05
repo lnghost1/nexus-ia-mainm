@@ -19,7 +19,7 @@ export const Community: React.FC = () => {
         <p className="text-nexus-muted text-sm mt-1">Junte-se a uma comunidade de traders que lucram todos os dias.</p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:max-w-lg mx-auto gap-8 mb-12">
         {/* WhatsApp Card */}
         <div className="glass-panel p-8 rounded-2xl border border-green-500/20 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 blur-[80px] rounded-full pointer-events-none group-hover:bg-green-500/20 transition-colors"></div>
@@ -40,7 +40,7 @@ export const Community: React.FC = () => {
               </li>
             </ul>
             <a 
-               href="https://whatsapp.com" 
+               href="https://chat.whatsapp.com/DLZIlVw0jkr0g52rn2FoWH?mode=hqrt3" 
                target="_blank" 
                rel="noopener noreferrer"
                className="w-full bg-[#25D366] hover:bg-[#20BD5C] text-black font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-green-900/20"
@@ -48,23 +48,6 @@ export const Community: React.FC = () => {
                <MessageCircle size={20} />
                Entrar no Grupo Agora
              </a>
-          </div>
-        </div>
-
-        {/* Discord Card (Placeholder) */}
-        <div className="glass-panel p-8 rounded-2xl border border-indigo-500/20 relative overflow-hidden opacity-75 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-          <div className="relative z-10">
-             <div className="w-14 h-14 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 mb-6">
-              <Users size={32} />
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-2">Servidor Discord</h3>
-            <p className="text-nexus-muted mb-6 leading-relaxed">
-              Salas de voz para trading ao vivo, compartilhamento de tela e bots exclusivos de análise. (Em breve)
-            </p>
-            <button disabled className="w-full bg-nexus-800 text-gray-400 font-bold py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-nexus-700">
-               Em Breve
-             </button>
           </div>
         </div>
       </div>
