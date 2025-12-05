@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
@@ -206,11 +205,14 @@ export const authService = {
   
   // VALIDAÇÃO DA CHAVE DE LICENÇA
   activateProPlan: async (licenseKey: string): Promise<User> => {
-      // Chave universal atualizada conforme solicitação
-      const SERVER_KEY = getEnv('VITE_LICENSE_KEY') || 'NX-NEXUS-TRADE';
+      const serverKey = getEnv('VITE_LICENSE_KEY');
       
+      if (!serverKey) {
+        throw new Error("A chave de licença do sistema não está configurada. Contate o suporte.");
+      }
+
       const normalizedInput = licenseKey.trim().toUpperCase();
-      const normalizedServerKey = SERVER_KEY.trim().toUpperCase();
+      const normalizedServerKey = serverKey.trim().toUpperCase();
       
       const isValid = normalizedInput === normalizedServerKey;
 

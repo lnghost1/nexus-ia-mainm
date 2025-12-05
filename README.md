@@ -2,39 +2,48 @@
 
 Plataforma profissional de análise técnica de trading impulsionada pelo Google Gemini 2.5 Flash.
 
-## 🚀 Deploy Rápido (Vercel)
+## 🚀 Deploy na Vercel
 
-Como a chave de API já foi configurada no código para facilitar a demonstração, você pode fazer o deploy diretamente:
+Este projeto está pronto para ser implantado na Vercel.
 
-1. Suba este código para o seu **GitHub**.
-2. Crie uma conta na **Vercel** (vercel.com).
-3. Clique em "Add New Project" e importe o repositório do GitHub.
-4. Framework Preset: Deixe como **Vite**.
-5. Clique em **Deploy**.
+1.  **Fork e Clone**: Faça um fork deste repositório e clone-o para sua máquina local.
+2.  **Suba para o GitHub**: Envie o código para o seu próprio repositório no GitHub.
+3.  **Importe na Vercel**:
+    *   Crie uma conta na [Vercel](https://vercel.com).
+    *   Clique em "Add New... > Project" e importe o repositório do GitHub.
+    *   Vercel detectará automaticamente que é um projeto Vite e aplicará as configurações corretas.
+4.  **Configure as Variáveis de Ambiente**:
+    *   No painel do seu projeto na Vercel, vá para **Settings > Environment Variables**.
+    *   Adicione as seguintes variáveis:
 
-O projeto detectará automaticamente as configurações e estará online em segundos.
+| Nome              | Valor                                       | Descrição                                     |
+| ----------------- | ------------------------------------------- | --------------------------------------------- |
+| `VITE_API_KEY`    | `SuaChaveDeAPIDoGoogleGemini`               | Necessária para a análise de IA funcionar.    |
+| `VITE_LICENSE_KEY`| `NX-NEXUS-TRADE` (ou sua chave customizada) | Chave para ativar o plano PRO na aplicação.   |
+
+5.  **Deploy**: Clique em **Deploy**. Seu site estará online em segundos.
 
 ## 🛠️ Instalação Local
 
-1. Instale as dependências:
-```bash
-npm install
-```
-
-2. Rode o servidor de desenvolvimento:
-```bash
-npm run dev
-```
-
-## 🔑 Configuração
-
-A API Key do Google Gemini está configurada em `services/geminiService.ts`. 
-
-Para produção segura no futuro, recomenda-se mover a chave para Variáveis de Ambiente na Vercel (`VITE_API_KEY`).
+1.  **Instale as dependências**:
+    ```bash
+    npm install
+    ```
+2.  **Configure as Variáveis de Ambiente Locais**:
+    *   Crie um arquivo chamado `.env.local` na raiz do projeto.
+    *   Adicione as mesmas variáveis do passo de deploy:
+        ```
+        VITE_API_KEY="SuaChaveDeAPIDoGoogleGemini"
+        VITE_LICENSE_KEY="NX-NEXUS-TRADE"
+        ```
+3.  **Rode o servidor de desenvolvimento**:
+    ```bash
+    npm run dev
+    ```
 
 ## 📱 Tecnologias
 
 - **Frontend:** React 19, Vite, TailwindCSS
 - **AI:** Google Gemini 2.5 Flash (`@google/genai`)
-- **Routing:** React Router DOM (HashRouter)
+- **Routing:** React Router DOM (BrowserRouter)
 - **Icons:** Lucide React

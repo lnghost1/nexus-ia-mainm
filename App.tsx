@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useContext, createContext } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Learning } from './pages/Learning';
@@ -90,7 +89,7 @@ const App: React.FC = () => {
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout }}>
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           {/* Root redirect logic: If user is logged in -> Dashboard, else -> Login will be handled by protected route logic or explicit redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -161,7 +160,7 @@ const App: React.FC = () => {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </AuthContext.Provider>
   );
 };

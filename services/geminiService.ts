@@ -1,36 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, AnalysisSignal } from "../types";
 
-// ==================================================================================
-// CONFIGURAÇÃO DA API KEY
-// ==================================================================================
-const HARDCODED_KEY = "AIzaSyBcTXXgMVKY3QvEAWmtM7FNQrMKX9FR_Bw"; 
-// ==================================================================================
-
-// Helper seguro para pegar a chave API em qualquer ambiente
+// Helper seguro para pegar a chave API do ambiente
 const getApiKey = () => {
-  // 1. Tenta VITE (Import Meta)
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
-    }
-  } catch (e) {}
-
-  // 2. Tenta PROCESS (Node/Legacy)
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
-      // @ts-ignore
-      if (process.env.VITE_API_KEY) return process.env.VITE_API_KEY;
-      // @ts-ignore
-      if (process.env.API_KEY) return process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  // 3. Retorna chave fixa fornecida
-  return HARDCODED_KEY;
+  // @ts-ignore
+  const apiKey = import.meta.env.VITE_API_KEY;
+  if (!apiKey) {
+    console.error("VITE_API_KEY não está definida no seu ambiente.");
+    // Lança um erro para o usuário ver no console do navegador
+    throw new Error("Chave de API do Google Gemini não configurada. Adicione VITE_API_KEY às suas variáveis de ambiente.");
+  }
+  return apiKey;
 };
 
 export const fileToGenerativePart = async (file: File): Promise<string> => {
@@ -49,10 +29,6 @@ export const fileToGenerativePart = async (file: File): Promise<string> => {
 export const analyzeChart = async (base64Image: string, mimeType: string): Promise<AnalysisResult> => {
   
   const apiKey = getApiKey();
-  
-  if (!apiKey) {
-    throw new Error("Chave de API não encontrada.");
-  }
 
   const ai = new GoogleGenAI({ apiKey });
 
