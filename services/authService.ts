@@ -72,22 +72,13 @@ export const authService = {
 
     const { user } = session;
 
-    // Busca o perfil na tabela 'profiles'
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('name, plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = 'exact one row not found'
-        console.error("Erro ao buscar perfil:", profileError);
-    }
-
+    // DIAGNÓSTICO: Ignorando temporariamente a busca de perfil para evitar travamento.
+    // Isso garante que o aplicativo carregue, mesmo que a tabela 'profiles' esteja inacessível.
     return {
         id: user.id,
         email: user.email || '',
-        name: profile?.name || user.email?.split('@')[0] || 'Trader',
-        plan: profile?.plan || 'free'
+        name: user.email?.split('@')[0] || 'Trader',
+        plan: 'free' // Assume 'free' como padrão durante este diagnóstico.
     };
   }
 };
