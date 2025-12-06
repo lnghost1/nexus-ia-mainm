@@ -1,6 +1,6 @@
 # NexusTrade AI
 
-Plataforma profissional de análise técnica de trading impulsionada pelo Google Gemini 2.5 Flash.
+Plataforma profissional de análise técnica de trading impulsionada pelo Google Gemini.
 
 ## 🚀 Deploy na Vercel
 
@@ -14,12 +14,14 @@ Este projeto está pronto para ser implantado na Vercel.
     *   Vercel detectará automaticamente que é um projeto Vite e aplicará as configurações corretas.
 4.  **Configure as Variáveis de Ambiente**:
     *   No painel do seu projeto na Vercel, vá para **Settings > Environment Variables**.
-    *   Adicione as seguintes variáveis:
+    *   Adicione as seguintes variáveis. É crucial que os nomes sejam exatamente como estão abaixo.
 
-| Nome              | Valor                                       | Descrição                                     |
-| ----------------- | ------------------------------------------- | --------------------------------------------- |
-| `VITE_API_KEY`    | `SuaChaveDeAPIDoGoogleGemini`               | Necessária para a análise de IA funcionar.    |
-| `VITE_LICENSE_KEY`| `NX-NEXUS-TRADE` (ou sua chave customizada) | Chave para ativar o plano PRO na aplicação.   |
+| Nome                      | Valor                                       | Descrição                                     |
+| ------------------------- | ------------------------------------------- | --------------------------------------------- |
+| `VITE_SUPABASE_URL`       | `URLdoSeuProjetoSupabase`                   | Encontrado nas configurações de API do Supabase. |
+| `VITE_SUPABASE_ANON_KEY`  | `ChaveAnônimaDoSupabase`                    | Encontrado nas configurações de API do Supabase. |
+| `VITE_API_KEY`            | `SuaChaveDeAPIDoGoogleGemini`               | Necessária para a análise de IA funcionar.    |
+| `VITE_LICENSE_KEY`        | `NX-NEXUS-TRADE` (ou sua chave customizada) | Chave para ativar o plano PRO na aplicação.   |
 
 5.  **Deploy**: Clique em **Deploy**. Seu site estará online em segundos.
 
@@ -33,6 +35,8 @@ Este projeto está pronto para ser implantado na Vercel.
     *   Crie um arquivo chamado `.env.local` na raiz do projeto.
     *   Adicione as mesmas variáveis do passo de deploy:
         ```
+        VITE_SUPABASE_URL="URLdoSeuProjetoSupabase"
+        VITE_SUPABASE_ANON_KEY="ChaveAnônimaDoSupabase"
         VITE_API_KEY="SuaChaveDeAPIDoGoogleGemini"
         VITE_LICENSE_KEY="NX-NEXUS-TRADE"
         ```
@@ -44,6 +48,7 @@ Este projeto está pronto para ser implantado na Vercel.
 ## 📱 Tecnologias
 
 - **Frontend:** React 19, Vite, TailwindCSS
-- **AI:** Google Gemini 2.5 Flash (`@google/genai`)
-- **Routing:** React Router DOM (BrowserRouter)
+- **AI:** Google Gemini (`@google/genai`)
+- **Backend & Auth:** Supabase
+- **Routing:** React Router DOM
 - **Icons:** Lucide React
