@@ -31,6 +31,14 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Temporizador para evitar carregamento infinito
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn("Verificação de autenticação demorou muito. Assumindo deslogado.");
+        setLoading(false);
+      }
+    }, 5000); // Timeout de 5 segundos
+
     // Função para verificar a sessão do usuário na carga inicial
     const checkUserSession = async () => {
       try {
@@ -40,6 +48,7 @@ const App: React.FC = () => {
         console.error("Erro ao verificar a sessão inicial:", error);
         setUser(null);
       } finally {
+        clearTimeout(timeoutId); // Limpa o temporizador se a verificação for concluída
         setLoading(false);
       }
     };
