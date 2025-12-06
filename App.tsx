@@ -7,14 +7,14 @@ import { Ranking } from './pages/Ranking';
 import { Community } from './pages/Community';
 import { Checkout } from './pages/Checkout';
 import { Layout } from './components/Layout';
-import { User, AuthState } from './types';
+import { User } from './types';
 import { authService } from './services/authService';
 import { supabase } from './lib/supabase';
 
 // Auth Context
-interface AuthContextType extends AuthState {
-  login: (e: string, p: string) => Promise<void>;
-  register: (n: string, e: string, p: string) => Promise<void>;
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
   logout: () => void;
 }
 
@@ -32,20 +32,15 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // 1. Verificar sessão inicial
-    const initAuth = async () => {
-      try {
-        const u = await authService.getCurrentUser();
-        setUser(u);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+    const checkUser = async () => {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+      setLoading(false);
     };
-    initAuth();
+    checkUser();
 
-    // 2. Escutar mudanças (Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 2. Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
@@ -53,25 +48,17 @@ const App: React.FC = () => {
           name: session.user.user_metadata.name || 'Trader',
           plan: session.user.user_metadata.plan || 'free'
         });
-      } else if (event === 'SIGNED_OUT') {
-        // Handled by logout manually to clear localstorage mock
+      } else {
+        setUser(null);
       }
+      // Se o evento for SIGNED_IN, o loading já pode parar.
+      if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION') setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  const login = async (email: string, pass: string) => {
-    const loggedUser = await authService.login(email, pass);
-    setUser(loggedUser);
-  };
-
-  const register = async (name: string, email: string, pass: string) => {
-    const registeredUser = await authService.register(name, email, pass);
-    setUser(registeredUser);
-  };
 
   const logout = async () => {
     await authService.logout();
@@ -88,11 +75,10 @@ const App: React.FC = () => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout }}>
       <BrowserRouter>
         <Routes>
-          {/* Root redirect logic: If user is logged in -> Dashboard, else -> Login will be handled by protected route logic or explicit redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           
           <Route 
             path="/login" 
