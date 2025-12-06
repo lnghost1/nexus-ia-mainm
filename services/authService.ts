@@ -69,22 +69,35 @@ export const authService = {
   },
 
   getCurrentUser: async (): Promise<User | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return null;
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error("Error getting session:", sessionError.message);
+      return null;
+    }
+    
+    if (!session) {
+      return null;
+    }
 
     const { user } = session;
 
     // Busca o perfil na tabela 'profiles'
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('name, plan')
       .eq('id', user.id)
       .single();
 
+    // Loga o erro mas não falha completamente, permite o login mesmo se o perfil estiver faltando
+    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = Nenhuma linha retornada
+        console.error("Erro ao buscar perfil do usuário:", profileError.message);
+    }
+
     return {
         id: user.id,
         email: user.email || '',
-        name: profile?.name || user.user_metadata.full_name || 'Trader',
+        name: profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Trader',
         plan: profile?.plan || 'free'
     };
   }

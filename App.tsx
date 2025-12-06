@@ -31,18 +31,20 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-      setLoading(false);
-    };
-    checkUser();
+    setLoading(true);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-      if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setLoading(false);
+      // Em cargas iniciais ou quando o usuário entra/sai, busca o perfil.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          console.error("Erro ao processar mudança de autenticação:", error);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
       }
     });
 
