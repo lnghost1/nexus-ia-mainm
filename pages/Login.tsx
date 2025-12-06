@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
@@ -8,15 +8,8 @@ import { Logo } from '../components/Logo';
 export const Login: React.FC = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/dashboard');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  // O listener de autenticação foi removido daqui.
+  // O App.tsx já gerencia o estado global e os redirecionamentos.
 
   return (
     <div className="min-h-screen w-full bg-[#050505] grid-bg flex items-center justify-center p-4 relative overflow-hidden">
