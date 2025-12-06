@@ -1,25 +1,11 @@
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
-// Helper para ler variáveis de ambiente de forma segura (Vite/Vercel)
-const getEnv = (key: string) => {
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-      // @ts-ignore
-      return import.meta.env[key];
-    }
-  } catch (e) {}
-
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      // @ts-ignore
-      return process.env[key];
-    }
-  } catch (e) {}
-  
-  return '';
+// Helper simplificado para ler variáveis de ambiente do Vite
+const getEnv = (key: string): string => {
+  // @ts-ignore
+  const envVar = import.meta.env[key];
+  return envVar || '';
 };
 
 export const authService = {
@@ -27,20 +13,22 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
 
-    // Atualiza apenas o plano, ignorando a coluna que está causando o erro de cache.
+    // Apenas atualiza o plano. O banco de dados deve cuidar do `updated_at` se houver um trigger.
     const { error } = await supabase
       .from('profiles')
-      .update({ 
-        plan: 'pro', 
-        updated_at: new Date().toISOString() 
-      })
+      .update({ plan: 'pro' })
       .eq('id', user.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro no Supabase ao tentar fazer upgrade:", error);
+      throw new Error(`Falha ao atualizar o plano: ${error.message}`);
+    }
     
-    // Retorna os dados atualizados do usuário
+    // Retorna os dados atualizados do usuário para atualizar o estado da aplicação
     const updatedUser = await authService.getCurrentUser();
-    if (!updatedUser) throw new Error("Falha ao buscar perfil atualizado.");
+    if (!updatedUser) {
+      throw new Error("Falha ao buscar perfil atualizado após o upgrade.");
+    }
     return updatedUser;
   },
   
@@ -48,15 +36,14 @@ export const authService = {
       const serverKey = getEnv('VITE_LICENSE_KEY');
       
       if (!serverKey) {
+        console.error("VITE_LICENSE_KEY não está configurada no ambiente.");
         throw new Error("A chave de licença do sistema não está configurada. Contate o suporte.");
       }
 
       const normalizedInput = licenseKey.trim().toUpperCase();
       const normalizedServerKey = serverKey.trim().toUpperCase();
       
-      const isValid = normalizedInput === normalizedServerKey;
-
-      if (isValid) {
+      if (normalizedInput === normalizedServerKey) {
           return authService.upgradeToPro();
       } else {
           throw new Error(`Chave inválida. Verifique o código enviado ao seu email.`);
@@ -85,14 +72,17 @@ export const authService = {
 
     const { user } = session;
 
-    // Busca o perfil na tabela 'profiles' DEPOIS, para não travar o login
-    const { data: profile } = await supabase
+    // Busca o perfil na tabela 'profiles'
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('name, plan')
       .eq('id', user.id)
       .single();
 
-    // Retorna um usuário com dados básicos para garantir que o app carregue
+    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = 'exact one row not found'
+        console.error("Erro ao buscar perfil:", profileError);
+    }
+
     return {
         id: user.id,
         email: user.email || '',
