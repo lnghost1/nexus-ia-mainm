@@ -27,7 +27,7 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
 
-    // Atualiza o plano na tabela 'profiles'
+    // Atualiza apenas o plano, ignorando a coluna que está causando o erro de cache.
     const { error } = await supabase
       .from('profiles')
       .update({ 
