@@ -13,7 +13,6 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
 
-    // Apenas atualiza o plano. O banco de dados deve cuidar do `updated_at` se houver um trigger.
     const { error } = await supabase
       .from('profiles')
       .update({ plan: 'pro' })
@@ -24,7 +23,6 @@ export const authService = {
       throw new Error(`Falha ao atualizar o plano: ${error.message}`);
     }
     
-    // Retorna os dados atualizados do usuário para atualizar o estado da aplicação
     const updatedUser = await authService.getCurrentUser();
     if (!updatedUser) {
       throw new Error("Falha ao buscar perfil atualizado após o upgrade.");
@@ -61,24 +59,38 @@ export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (sessionError) {
-      console.error("Error getting session:", sessionError.message);
-      return null;
-    }
-    
-    if (!session) {
+    if (sessionError || !session) {
+      if (sessionError) console.error("Erro ao obter sessão:", sessionError.message);
       return null;
     }
 
-    const { user } = session;
+    const { user: authUser } = session;
 
-    // DIAGNÓSTICO: Ignorando temporariamente a busca de perfil para evitar travamento.
-    // Isso garante que o aplicativo carregue, mesmo que a tabela 'profiles' esteja inacessível.
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      if (profileError) console.error("Erro ao buscar perfil do usuário:", profileError.message);
+      
+      // Fallback CRÍTICO: Se o perfil não for encontrado, retorna um usuário padrão
+      // para evitar que o aplicativo trave.
+      return {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.email?.split('@')[0] || 'Trader',
+        plan: 'free',
+      };
+    }
+
+    // Combina os dados de autenticação e do perfil para um objeto de usuário completo
     return {
-        id: user.id,
-        email: user.email || '',
-        name: user.email?.split('@')[0] || 'Trader',
-        plan: 'free' // Assume 'free' como padrão durante este diagnóstico.
+      id: authUser.id,
+      email: authUser.email || '',
+      name: profile.name || authUser.email?.split('@')[0] || 'Trader',
+      plan: profile.plan || 'free',
     };
   }
 };
