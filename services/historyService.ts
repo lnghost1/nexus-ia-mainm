@@ -19,6 +19,11 @@ export const historyService = {
       return [];
     }
 
+    // Adicionado para garantir que não quebre se não houver dados
+    if (!data) {
+      return [];
+    }
+
     return data.map((item: any) => ({
       id: item.id,
       imageUrl: item.image_url,
