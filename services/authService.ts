@@ -85,29 +85,18 @@ export const authService = {
 
     const { user } = session;
 
-    // Busca o perfil na tabela 'profiles'
-    const { data: profile, error: profileError } = await supabase
+    // Busca o perfil na tabela 'profiles' DEPOIS, para não travar o login
+    const { data: profile } = await supabase
       .from('profiles')
       .select('name, plan')
       .eq('id', user.id)
       .single();
 
-    // Loga o erro mas não falha completamente, permite o login mesmo se o perfil estiver faltando
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = Nenhuma linha retornada
-        console.error("Erro ao buscar perfil do usuário:", profileError.message);
-        // Retornar um usuário básico mesmo em caso de erro de perfil para não travar o app
-        return {
-            id: user.id,
-            email: user.email || '',
-            name: user.email?.split('@')[0] || 'Trader',
-            plan: 'free'
-        };
-    }
-
+    // Retorna um usuário com dados básicos para garantir que o app carregue
     return {
         id: user.id,
         email: user.email || '',
-        name: profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Trader',
+        name: profile?.name || user.email?.split('@')[0] || 'Trader',
         plan: profile?.plan || 'free'
     };
   }
