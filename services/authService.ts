@@ -95,6 +95,13 @@ export const authService = {
     // Loga o erro mas não falha completamente, permite o login mesmo se o perfil estiver faltando
     if (profileError && profileError.code !== 'PGRST116') { // PGRST116 = Nenhuma linha retornada
         console.error("Erro ao buscar perfil do usuário:", profileError.message);
+        // Retornar um usuário básico mesmo em caso de erro de perfil para não travar o app
+        return {
+            id: user.id,
+            email: user.email || '',
+            name: user.email?.split('@')[0] || 'Trader',
+            plan: 'free'
+        };
     }
 
     return {
