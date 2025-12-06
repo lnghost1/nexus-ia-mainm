@@ -31,38 +31,19 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Temporizador para evitar carregamento infinito
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn("Verificação de autenticação demorou muito. Assumindo deslogado.");
-        setLoading(false);
-      }
-    }, 5000); // Timeout de 5 segundos
-
-    // Função para verificar a sessão do usuário na carga inicial
-    const checkUserSession = async () => {
-      try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Erro ao verificar a sessão inicial:", error);
-        setUser(null);
-      } finally {
-        clearTimeout(timeoutId); // Limpa o temporizador se a verificação for concluída
-        setLoading(false);
-      }
-    };
-
-    checkUserSession();
-
-    // Listener para mudanças de estado (login/logout)
+    // Listener unificado para gerenciar todas as mudanças de autenticação.
+    // Ele dispara na carga inicial e em qualquer login/logout.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+      if (session) {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
+      } else {
+        setUser(null);
       }
+      setLoading(false);
     });
 
+    // Limpa a inscrição ao desmontar o componente
     return () => {
       subscription.unsubscribe();
     };
