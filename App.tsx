@@ -31,7 +31,28 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 1. Verifica a sessão ativa na carga inicial
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar sessão inicial:", error);
+        setUser(null);
+      } finally {
+        setLoading(false); // Garante que o loading sempre termine
+      }
+    };
+
+    checkInitialSession();
+
+    // 2. Configura um ouvinte para mudanças de estado de autenticação (login, logout, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
         if (session) {
           const currentUser = await authService.getCurrentUser();
@@ -40,14 +61,12 @@ const App: React.FC = () => {
           setUser(null);
         }
       } catch (error) {
-        console.error("Erro durante a mudança de estado de autenticação:", error);
+        console.error("Erro na mudança de estado de autenticação:", error);
         setUser(null);
-      } finally {
-        // Garante que a tela de carregamento sempre desapareça
-        setLoading(false);
       }
     });
 
+    // Limpa a inscrição ao desmontar o componente
     return () => {
       subscription.unsubscribe();
     };
@@ -78,7 +97,7 @@ const App: React.FC = () => {
             element={!user ? <Login /> : <Navigate to="/dashboard" replace />} 
           />
 
-          {/* Protected Routes */}
+          {/* Rotas Protegidas */}
           <Route 
             path="/dashboard" 
             element={
