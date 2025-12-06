@@ -3,12 +3,12 @@ import { AnalysisResult, AnalysisSignal } from "../types";
 
 // Helper seguro para pegar a chave API do ambiente
 const getApiKey = () => {
-  // @ts-ignore
-  const apiKey = import.meta.env.VITE_API_KEY;
+  // Chave de API inserida diretamente para garantir o funcionamento.
+  const apiKey = "AIzaSyCZFil8wVDNBDKUdEW8-GDZ3LiT5_8zlkM";
+  
   if (!apiKey) {
-    console.error("VITE_API_KEY não está definida no seu ambiente.");
-    // Lança um erro para o usuário ver no console do navegador
-    throw new Error("Chave de API do Google Gemini não configurada. Adicione VITE_API_KEY às suas variáveis de ambiente.");
+    console.error("Chave de API do Google Gemini não configurada.");
+    throw new Error("Chave de API do Google Gemini não configurada.");
   }
   return apiKey;
 };
