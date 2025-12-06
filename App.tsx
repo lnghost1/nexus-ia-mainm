@@ -31,7 +31,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Verificar sessão inicial
     const checkUser = async () => {
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
@@ -39,20 +38,12 @@ const App: React.FC = () => {
     };
     checkUser();
 
-    // 2. Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata.name || 'Trader',
-          plan: session.user.user_metadata.plan || 'free'
-        });
-      } else {
-        setUser(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+      if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(false);
       }
-      // Se o evento for SIGNED_IN, o loading já pode parar.
-      if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION') setLoading(false);
     });
 
     return () => {

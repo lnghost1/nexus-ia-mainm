@@ -27,22 +27,20 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
 
-    const { data, error } = await supabase.auth.updateUser({
-        data: { plan: 'pro' }
-    });
+    // Atualiza o plano na tabela 'profiles'
+    const { error } = await supabase
+      .from('profiles')
+      .update({ plan: 'pro', updated_at: new Date().toISOString() })
+      .eq('id', user.id);
 
     if (error) throw error;
     
-    const updatedUser = data.user;
-    return {
-        id: updatedUser.id,
-        email: updatedUser.email || '',
-        name: updatedUser.user_metadata.name,
-        plan: 'pro'
-    };
+    // Retorna os dados atualizados do usuário
+    const updatedUser = await authService.getCurrentUser();
+    if (!updatedUser) throw new Error("Falha ao buscar perfil atualizado.");
+    return updatedUser;
   },
   
-  // VALIDAÇÃO DA CHAVE DE LICENÇA
   activateProPlan: async (licenseKey: string): Promise<User> => {
       const serverKey = getEnv('VITE_LICENSE_KEY');
       
@@ -75,11 +73,19 @@ export const authService = {
     if (!session) return null;
 
     const { user } = session;
+
+    // Busca o perfil na tabela 'profiles'
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, plan')
+      .eq('id', user.id)
+      .single();
+
     return {
         id: user.id,
         email: user.email || '',
-        name: user.user_metadata.name || 'Trader',
-        plan: user.user_metadata.plan || 'free'
+        name: profile?.name || user.user_metadata.full_name || 'Trader',
+        plan: profile?.plan || 'free'
     };
   }
 };
