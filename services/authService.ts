@@ -27,12 +27,11 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
 
-    // Atualiza o plano e a nova flag 'has_valid_key' na tabela 'profiles'
+    // Atualiza o plano na tabela 'profiles'
     const { error } = await supabase
       .from('profiles')
       .update({ 
         plan: 'pro', 
-        has_valid_key: true, 
         updated_at: new Date().toISOString() 
       })
       .eq('id', user.id);
