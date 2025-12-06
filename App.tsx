@@ -31,19 +31,23 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listener unificado para gerenciar todas as mudanças de autenticação.
-    // Ele dispara na carga inicial e em qualquer login/logout.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-      } else {
+      try {
+        if (session) {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Erro durante a mudança de estado de autenticação:", error);
         setUser(null);
+      } finally {
+        // Garante que a tela de carregamento sempre desapareça
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    // Limpa a inscrição ao desmontar o componente
     return () => {
       subscription.unsubscribe();
     };

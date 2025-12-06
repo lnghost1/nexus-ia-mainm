@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { LogOut, LayoutDashboard, BookOpen, Menu, X, Trophy, Users, Crown, Zap, ExternalLink } from 'lucide-react';
 import { useAuth } from '../App';
@@ -85,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="border-t border-nexus-border pt-4">
                 <div className="flex items-center gap-3 mb-4 px-2">
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-nexus-primary to-nexus-800 flex items-center justify-center text-sm font-bold text-white shadow-lg relative">
-                    {user?.name.charAt(0).toUpperCase()}
+                    {user?.name?.charAt(0).toUpperCase()}
                     {user?.plan === 'pro' && (
                         <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5">
                             <Crown size={8} className="text-black" fill="black" />
