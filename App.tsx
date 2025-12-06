@@ -31,20 +31,26 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    // Função para verificar a sessão do usuário na carga inicial
+    const checkUserSession = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error("Erro ao verificar a sessão inicial:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    checkUserSession();
+
+    // Listener para mudanças de estado (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Em cargas iniciais ou quando o usuário entra/sai, busca o perfil.
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        try {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } catch (error) {
-          console.error("Erro ao processar mudança de autenticação:", error);
-          setUser(null);
-        } finally {
-          setLoading(false);
-        }
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
       }
     });
 
