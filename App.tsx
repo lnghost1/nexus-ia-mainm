@@ -10,6 +10,7 @@ import { Layout } from './components/Layout';
 import { User } from './types';
 import { authService } from './services/authService';
 import { supabase } from './lib/supabase';
+import { Landing } from './pages/Landing';
 
 // Auth Context
 interface AuthContextType {
@@ -90,7 +91,7 @@ const App: React.FC = () => {
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout }}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/" element={<Landing />} />
           
           <Route 
             path="/login" 
