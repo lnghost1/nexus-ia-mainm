@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/', // Essencial para evitar tela branca na Vercel/GitHub Pages
+  // A linha 'base' foi removida para usar o padrão da Vercel.
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
