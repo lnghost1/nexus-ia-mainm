@@ -1,38 +1,25 @@
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
-// Helper simplificado para ler variáveis de ambiente do Vite
-const getEnv = (key: string): string => {
-  // @ts-ignore
-  const envVar = import.meta.env[key];
-  return envVar || '';
-};
-
 export const authService = {
-  // A função de upgrade não é mais estritamente necessária, mas mantida para integridade
-  upgradeToPro: async (): Promise<User> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Usuário não autenticado para fazer upgrade.");
+  activateProPlan: async (licenseKey: string): Promise<void> => {
+    const { error } = await supabase.functions.invoke('activate-pro', {
+      body: { licenseKey },
+    });
 
-    await supabase.from('profiles').update({ plan: 'pro' }).eq('id', user.id);
-    
-    const updatedUser = await authService.getCurrentUser();
-    if (!updatedUser) throw new Error("Falha ao buscar perfil atualizado.");
-    return updatedUser;
-  },
-  
-  activateProPlan: async (licenseKey: string): Promise<User> => {
-      const serverKey = getEnv('VITE_LICENSE_KEY');
-      
-      if (!serverKey) {
-        throw new Error("A chave de licença do sistema não está configurada.");
+    if (error) {
+      // Tenta extrair a mensagem de erro específica da função
+      if (error.context && typeof error.context.responseText === 'string') {
+        try {
+          const errorData = JSON.parse(error.context.responseText);
+          throw new Error(errorData.error || 'Erro desconhecido ao ativar a chave.');
+        } catch (e) {
+          // Fallback para a mensagem de erro genérica
+          throw new Error(error.message || 'Falha ao ativar o plano PRO.');
+        }
       }
-
-      if (licenseKey.trim().toUpperCase() === serverKey.trim().toUpperCase()) {
-          return authService.upgradeToPro();
-      } else {
-          throw new Error(`Chave inválida.`);
-      }
+      throw new Error(error.message || 'Falha ao ativar o plano PRO.');
+    }
   },
 
   logout: async () => {
@@ -49,19 +36,22 @@ export const authService = {
 
     const { user: authUser } = session;
 
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
       .single();
 
-    // Lógica simplificada: Retorna um objeto de usuário completo,
-    // forçando o plano 'pro' para garantir acesso total e evitar travamentos.
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found, which is ok
+      console.error("Erro ao buscar perfil:", error);
+      return null;
+    }
+
     return {
       id: authUser.id,
       email: authUser.email || '',
       name: profile?.name || authUser.email?.split('@')[0] || 'Trader',
-      plan: 'pro', // <-- MUDANÇA PRINCIPAL: Acesso PRO garantido para todos.
+      plan: profile?.plan || 'free', // <-- CORREÇÃO DE SEGURANÇA APLICADA
     };
   }
 };
