@@ -1,16 +1,14 @@
 import { supabase } from '../lib/supabase';
 import { HistoryItem } from '../types';
-import { authService } from './authService';
 
 export const historyService = {
-  getHistory: async (): Promise<HistoryItem[]> => {
-    const user = await authService.getCurrentUser();
-    if (!user) return [];
+  getHistory: async (userId: string): Promise<HistoryItem[]> => {
+    if (!userId) return [];
 
     const { data, error } = await supabase
       .from('analyses')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -19,7 +17,6 @@ export const historyService = {
       return [];
     }
 
-    // Adicionado para garantir que não quebre se não houver dados
     if (!data) {
       return [];
     }
@@ -31,14 +28,13 @@ export const historyService = {
     }));
   },
 
-  addToHistory: async (item: HistoryItem) => {
-    const user = await authService.getCurrentUser();
-    if (!user) return;
+  addToHistory: async (item: HistoryItem, userId: string) => {
+    if (!userId) return;
 
     const { error } = await supabase
       .from('analyses')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         image_url: item.imageUrl,
         result: item.result
       });

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, Clipboard, FileImage, CheckCircle, Lock, ExternalLink, Zap, X } from 'lucide-react';
 import { analyzeChart, fileToGenerativePart } from '../services/geminiService';
@@ -16,7 +15,7 @@ export const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false); // Estado para controlar o modal de bloqueio
+  const [showPaywall, setShowPaywall] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const isPro = user?.plan === 'pro';
@@ -26,8 +25,10 @@ export const Dashboard: React.FC = () => {
   // Carregar histórico
   useEffect(() => {
     const loadHistory = async () => {
-      const items = await historyService.getHistory();
-      setHistory(items);
+      if (user?.id) {
+        const items = await historyService.getHistory(user.id);
+        setHistory(items);
+      }
     };
     loadHistory();
   }, [user]);
@@ -74,18 +75,15 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!file || !preview) return;
+    if (!file || !preview || !user?.id) return;
 
     setLoading(true);
     setError(null);
 
-    // LÓGICA DE BLOQUEIO PÓS-CLICK (SIMULAÇÃO)
     if (!isPro) {
-        // Simula o tempo de análise da IA para gerar expectativa
         await new Promise(r => setTimeout(r, 2500)); 
-        
         setLoading(false);
-        setShowPaywall(true); // Exibe o modal de bloqueio
+        setShowPaywall(true);
         return;
     }
 
@@ -95,14 +93,13 @@ export const Dashboard: React.FC = () => {
       
       setResult(analysis);
       
-      // Salvar no histórico
       const historyItem: HistoryItem = {
         id: crypto.randomUUID(),
         imageUrl: preview, 
         result: analysis
       };
-      await historyService.addToHistory(historyItem);
-      const updatedHistory = await historyService.getHistory();
+      await historyService.addToHistory(historyItem, user.id);
+      const updatedHistory = await historyService.getHistory(user.id);
       setHistory(updatedHistory);
 
     } catch (err: any) {
@@ -141,7 +138,6 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto pb-20 relative">
       
-      {/* MODAL PAYWALL (Aparece apenas quando o usuário Free tenta analisar) */}
       {showPaywall && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
              <div className="bg-[#0A0A0A] border border-nexus-primary/50 rounded-2xl p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(0,229,153,0.2)]">
@@ -204,7 +200,6 @@ export const Dashboard: React.FC = () => {
       {!result ? (
         <div className="animate-fade-in">
           
-          {/* ÁREA DE UPLOAD */}
           <div 
             className={`
               relative group
@@ -235,7 +230,6 @@ export const Dashboard: React.FC = () => {
                    Dica: Foque nas últimas 20 velas para maior precisão.
                  </p>
                  
-                 {/* Visual de Gráfico Exemplo (CSS/SVG) */}
                  <div className="mt-10 relative w-64 mx-auto pointer-events-none select-none">
                     <div className="absolute inset-0 bg-nexus-primary/20 blur-[40px] rounded-full opacity-20"></div>
                     <div className="bg-[#050505] border border-nexus-border rounded-lg p-2 shadow-2xl relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
@@ -285,11 +279,9 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
             
-            {/* Click handler for the whole area if no preview */}
             {!preview && <div className="absolute inset-0 z-0" onClick={() => fileInputRef.current?.click()} />}
           </div>
 
-          {/* BOTÕES DE AÇÃO - VISÍVEIS PARA TODOS AGORA */}
           <div className="flex flex-col md:flex-row gap-4 mt-8 justify-center">
                 {!preview ? (
                 <>
@@ -330,7 +322,6 @@ export const Dashboard: React.FC = () => {
         <div className="animate-fade-in space-y-6">
           
           <div className="flex flex-col md:flex-row gap-4 items-stretch">
-            {/* VEREDITO PRINCIPAL */}
             <div className={`flex-1 p-6 rounded-2xl border flex flex-col justify-center items-center text-center shadow-[0_0_30px_rgba(0,0,0,0.3)] ${
               result.signal === 'BUY' ? 'bg-nexus-primary/10 border-nexus-primary/50 shadow-[0_0_20px_rgba(0,229,153,0.15)]' : 
               result.signal === 'SELL' ? 'bg-nexus-danger/10 border-nexus-danger/50 shadow-[0_0_20px_rgba(255,41,80,0.15)]' : 
@@ -409,7 +400,6 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* BANNER DE AFILIAÇÃO CORRETORA */}
       <div className="mt-12 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none"></div>
         <div className="relative z-10 text-center md:text-left">
@@ -431,7 +421,6 @@ export const Dashboard: React.FC = () => {
         </a>
       </div>
 
-      {/* HISTÓRICO DE ANÁLISES */}
       {history.length > 0 && !result && isPro && (
         <div className="mt-20">
            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
