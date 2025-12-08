@@ -8,17 +8,23 @@ export const authService = {
     });
 
     if (error) {
+      let errorMessage = "Falha ao ativar o plano PRO. Tente novamente."; // Mensagem padrão
+      
       // Tenta extrair a mensagem de erro específica da função
       if (error.context && typeof error.context.responseText === 'string') {
         try {
           const errorData = JSON.parse(error.context.responseText);
-          throw new Error(errorData.error || 'Erro desconhecido ao ativar a chave.');
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
         } catch (e) {
-          // Fallback para a mensagem de erro genérica
-          throw new Error(error.message || 'Falha ao ativar o plano PRO.');
+          console.error("A resposta da Edge Function não era um JSON válido:", error.context.responseText);
         }
+      } else {
+        errorMessage = error.message;
       }
-      throw new Error(error.message || 'Falha ao ativar o plano PRO.');
+      
+      throw new Error(errorMessage);
     }
   },
 

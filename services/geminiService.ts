@@ -20,8 +20,20 @@ export const analyzeChart = async (base64Image: string, mimeType: string): Promi
   });
 
   if (error) {
-    console.error("Erro ao invocar a Edge Function 'analyze-chart':", error);
-    throw new Error(error.message || "Falha na análise. Tente novamente.");
+    let errorMessage = "Falha na análise. Verifique sua imagem e tente novamente.";
+    if (error.context && typeof error.context.responseText === 'string') {
+        try {
+            const errorData = JSON.parse(error.context.responseText);
+            if (errorData.error) {
+                errorMessage = errorData.error;
+            }
+        } catch(e) {
+            console.error("A resposta da Edge Function 'analyze-chart' não era um JSON válido:", error.context.responseText);
+        }
+    } else {
+        errorMessage = error.message;
+    }
+    throw new Error(errorMessage);
   }
 
   if (data.error) {
