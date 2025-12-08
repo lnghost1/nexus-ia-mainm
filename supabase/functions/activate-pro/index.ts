@@ -23,17 +23,27 @@ serve(async (req) => {
       throw new Error('Chave de licença inválida.')
     }
 
+    // Cria um cliente com permissões de administrador (sem a chave do usuário)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user } } = await supabaseAdmin.auth.getUser()
-    if (!user) {
-      throw new Error('Usuário não autenticado.')
+    // Pega o token do usuário que fez a requisição
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('Cabeçalho de autorização ausente.');
+    }
+    const jwt = authHeader.replace('Bearer ', '')
+
+    // Valida o token do usuário para obter sua identidade
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt)
+
+    if (userError || !user) {
+      throw new Error('Usuário não autenticado ou token inválido.')
     }
 
+    // Atualiza o perfil do usuário identificado
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ plan: 'pro' })

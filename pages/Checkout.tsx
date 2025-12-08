@@ -7,33 +7,34 @@ import { ShieldCheck, Lock, CheckCircle, Key, ExternalLink, ShoppingCart, Infini
 
 export const Checkout: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [licenseKey, setLicenseKey] = useState('');
   const [error, setError] = useState('');
-  const { refetchUser } = useAuth(); // <-- Trazendo a nova função
+  const { refetchUser } = useAuth();
   const navigate = useNavigate();
 
-  // Link Oficial do Produto Kirvano
   const KIRVANO_PRODUCT_LINK = "https://pay.kirvano.com/e16d6c29-1f5f-491f-b3ff-e561dd625b16"; 
 
   const handleActivation = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setIsSuccess(false);
     
     try {
       await authService.activateProPlan(licenseKey);
-      
-      // Atualiza os dados do usuário nos bastidores
+      setIsSuccess(true);
       await refetchUser();
       
-      // Navega suavemente para o dashboard
-      navigate('/dashboard');
+      // Atraso para o usuário ver a mensagem de sucesso
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
       
     } catch (error: any) {
       console.error(error);
       setError(error.message || "Erro ao ativar chave.");
-    } finally {
-      setLoading(false); // Garante que o loading pare em caso de erro
+      setLoading(false);
     }
   };
 
@@ -130,14 +131,18 @@ export const Checkout: React.FC = () => {
 
               <button 
                 type="submit" 
-                disabled={loading}
-                className="w-full bg-nexus-primary hover:bg-nexus-400 text-black font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(0,229,153,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || isSuccess}
+                className={`w-full font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(0,229,153,0.3)] transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed
+                  ${isSuccess 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-nexus-primary hover:bg-nexus-400 text-black disabled:opacity-50'
+                  }`
+                }
               >
-                {loading ? 'Verificando...' : (
-                    <>
-                        <Lock size={18} /> Validar e Liberar Acesso
-                    </>
-                )}
+                {loading ? 'Verificando...' : 
+                 isSuccess ? <><CheckCircle size={18} /> Acesso Liberado!</> : 
+                 <><Lock size={18} /> Validar e Liberar Acesso</>
+                }
               </button>
             </form>
           </div>
