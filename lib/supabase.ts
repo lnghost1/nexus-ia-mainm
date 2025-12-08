@@ -1,12 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-// @ts-ignore
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// @ts-ignore
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("As variáveis de ambiente do Supabase (URL e Chave Anônima) não estão configuradas.");
+  console.error("ERRO CRÍTICO: VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não foram encontradas.");
+  console.error("Verifique suas Variáveis de Ambiente no painel da Vercel.");
+  throw new Error("Configuração do Supabase incompleta. O deploy irá falhar até que as variáveis sejam corrigidas na Vercel.");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
