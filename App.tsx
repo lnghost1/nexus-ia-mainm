@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext } from 'react';
+import React, { useState, useEffect, useContext, createContext, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -16,6 +16,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   logout: () => void;
+  refetchUser: () => Promise<void>; // <-- Adicionado
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -30,47 +31,32 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = useCallback(async () => {
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error("Erro ao buscar usuário:", error);
+      setUser(null);
+    }
+  }, []);
+
   useEffect(() => {
-    // 1. Verifica a sessão ativa na carga inicial
-    const checkInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Erro ao verificar sessão inicial:", error);
-        setUser(null);
-      } finally {
-        setLoading(false); // Garante que o loading sempre termine
-      }
-    };
+    setLoading(true);
+    fetchUser().finally(() => setLoading(false));
 
-    checkInitialSession();
-
-    // 2. Configura um ouvinte para mudanças de estado de autenticação (login, logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session) {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Erro na mudança de estado de autenticação:", error);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchUser();
+      } else {
         setUser(null);
       }
     });
 
-    // Limpa a inscrição ao desmontar o componente
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchUser]);
 
   const logout = async () => {
     await authService.logout();
@@ -87,7 +73,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout, refetchUser: fetchUser }}>
       <BrowserRouter>
         <Routes>
           <Route 

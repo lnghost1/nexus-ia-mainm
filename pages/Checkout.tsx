@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
@@ -10,7 +9,7 @@ export const Checkout: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [licenseKey, setLicenseKey] = useState('');
   const [error, setError] = useState('');
-  const { user } = useAuth();
+  const { refetchUser } = useAuth(); // <-- Trazendo a nova função
   const navigate = useNavigate();
 
   // Link Oficial do Produto Kirvano
@@ -24,16 +23,17 @@ export const Checkout: React.FC = () => {
     try {
       await authService.activateProPlan(licenseKey);
       
-      // Navega e recarrega para atualizar permissões
+      // Atualiza os dados do usuário nos bastidores
+      await refetchUser();
+      
+      // Navega suavemente para o dashboard
       navigate('/dashboard');
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
       
     } catch (error: any) {
       console.error(error);
       setError(error.message || "Erro ao ativar chave.");
-      setLoading(false);
+    } finally {
+      setLoading(false); // Garante que o loading pare em caso de erro
     }
   };
 
