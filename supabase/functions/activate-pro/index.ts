@@ -12,56 +12,66 @@ serve(async (req) => {
   }
 
   try {
-    const { licenseKey } = await req.json()
-    const serverKey = Deno.env.get('VITE_LICENSE_KEY')
+    // 1. Obter segredos necessários e falhar cedo se não estiverem definidos
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const serverLicenseKey = Deno.env.get('VITE_LICENSE_KEY');
 
-    if (!serverKey) {
-      throw new Error('A chave de licença do sistema (VITE_LICENSE_KEY) não foi configurada como um segredo na Supabase.')
+    if (!supabaseUrl || !serviceRoleKey || !serverLicenseKey) {
+      console.error('Variáveis de ambiente ausentes na Edge Function da Supabase.');
+      throw new Error('Configuração do servidor incompleta. Contate o suporte.');
     }
 
-    if (licenseKey.trim().toUpperCase() !== serverKey.trim().toUpperCase()) {
-      throw new Error('Chave de licença inválida.')
+    // 2. Obter corpo da requisição
+    const { licenseKey } = await req.json();
+    if (!licenseKey) {
+      throw new Error('Chave de licença não fornecida.');
     }
 
-    // Cria um cliente com permissões de administrador (sem a chave do usuário)
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // 3. Validar chave de licença
+    if (licenseKey.trim().toUpperCase() !== serverLicenseKey.trim().toUpperCase()) {
+      throw new Error('Chave de licença inválida.');
+    }
 
-    // Pega o token do usuário que fez a requisição
-    const authHeader = req.headers.get('Authorization')
+    // 4. Obter usuário a partir do JWT
+    const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Cabeçalho de autorização ausente.');
     }
-    const jwt = authHeader.replace('Bearer ', '')
+    const jwt = authHeader.replace('Bearer ', '');
 
-    // Valida o token do usuário para obter sua identidade
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt)
+    // 5. Criar cliente Admin (agora sabemos que as variáveis existem)
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
 
     if (userError || !user) {
-      throw new Error('Usuário não autenticado ou token inválido.')
+      console.error('Erro de validação do JWT:', userError?.message);
+      throw new Error('Sessão de usuário inválida ou expirada. Tente fazer login novamente.');
     }
 
-    // Atualiza o perfil do usuário identificado
+    // 6. Atualizar perfil do usuário
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ plan: 'pro' })
-      .eq('id', user.id)
+      .eq('id', user.id);
 
     if (updateError) {
-      throw updateError
+      console.error('Erro ao atualizar perfil:', updateError.message);
+      throw new Error('Não foi possível atualizar o perfil do usuário.');
     }
 
+    // 7. Retornar sucesso
     return new Response(JSON.stringify({ success: true, message: 'Plano PRO ativado com sucesso!' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
+
   } catch (error) {
-    console.error('Erro na função activate-pro:', error)
+    console.error('Erro na função activate-pro:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
-    })
+    });
   }
 })
