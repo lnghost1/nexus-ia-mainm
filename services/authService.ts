@@ -20,10 +20,10 @@ export const authService = {
             errorMessage = errorData.error;
           }
         } catch (e) {
-          console.error("A resposta da Edge Function não era um JSON válido:", error.context.responseText);
+          console.error("A resposta da Edge Function não era um JSON válido:", data.error.context.responseText);
         }
       } else {
-        errorMessage = error.message;
+        errorMessage = data.error.message;
       }
       
       throw new Error(errorMessage);
