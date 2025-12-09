@@ -39,27 +39,44 @@ export const authService = {
   },
 
   getCurrentUser: async (): Promise<User | null> => {
-    const { data: { session } } = await supabase.auth.getUser();
-    if (!session) return null;
-
-    const { user: authUser } = session;
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found, which is ok
-      console.error("Erro ao buscar perfil:", error);
-      return null;
-    }
-
-    return {
-      id: authUser.id,
-      email: authUser.email || '',
-      name: profile?.name || authUser.email?.split('@')[0] || 'Trader',
-      plan: profile?.plan || 'free', // <-- CORREÇÃO DE SEGURANÇA APLICADA
-    };
+  // Recupera sessão atual
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    console.error("Erro ao obter sessão:", sessionError);
+    return null;
   }
+
+  if (!session) return null;
+
+  const authUser = session.user;
+  if (!authUser) return null;
+
+  // Busca o profile no banco
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .single();
+
+  // Caso o erro não seja "no rows found"
+  if (profileError && profileError.code !== 'PGRST116') {
+    console.error("Erro ao buscar perfil:", profileError);
+    return null;
+  }
+
+  // Retorna o objeto User consolidado
+  return {
+    id: authUser.id,
+    email: authUser.email ?? '',
+    name:
+      profile?.name ||
+      authUser.email?.split('@')[0] ||
+      'Trader',
+
+    // ✔ Segurança: nunca confiamos no lado do frontend
+    // ✔ Se o profile não existir, assume free
+    plan: profile?.plan ?? 'free',
+  };
+}
+
 };
