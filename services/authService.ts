@@ -6,14 +6,16 @@ export const authService = {
     const { data, error } = await supabase.functions.invoke('activate-pro', {
       body: { licenseKey },
     });
-
     if (error) {
+      throw new Error(error.message || "Falha ao ativar o plano PRO.");
+    }
+    if (data.error) {
       let errorMessage = "Falha ao ativar o plano PRO. Tente novamente."; // Mensagem padrão
       
       // Tenta extrair a mensagem de erro específica da função
-      if (error.context && typeof error.context.responseText === 'string') {
+      if (data.error.context && typeof data.error.context.responseText === 'string') {
         try {
-          const errorData = JSON.parse(error.context.responseText);
+          const errorData = JSON.parse(data.error.context.responseText);
           if (errorData.error) {
             errorMessage = errorData.error;
           }
