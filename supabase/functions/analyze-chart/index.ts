@@ -65,8 +65,27 @@ serve(async (req) => {
       ],
     })
 
-    const response = result.response
-    const analysis = JSON.parse(response.text())
+    const response = result.response;
+    let analysis;
+
+    try {
+      // Tenta parsear a resposta da IA, que deve ser um JSON.
+      analysis = JSON.parse(response.text());
+    } catch (parseError) {
+      // Se o parse falhar, é provável que a IA não seguiu a instrução de retornar JSON.
+      // Isso geralmente acontece com imagens inválidas (não-gráficos).
+      console.error("Falha ao parsear JSON da resposta do Gemini:", response.text());
+      // Em vez de falhar, nós criamos uma resposta de erro estruturada.
+      analysis = {
+        signal: "NEUTRAL",
+        reasoning: "ERRO: A imagem enviada não parece ser um gráfico de trading válido. Por favor, envie uma captura de tela de um gráfico financeiro.",
+        pattern: "Inválido",
+        trend: "Indefinido",
+        supportLevels: [],
+        resistanceLevels: [],
+        confidence: 0
+      };
+    }
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

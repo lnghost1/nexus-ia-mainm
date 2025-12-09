@@ -16,10 +16,26 @@ export const analyzeChart = async (base64Image: string, mimeType: string): Promi
     const { data, error } = result;
 
     if (error) {
-      throw new Error(error.message || "Ocorreu um erro de comunicação com o servidor.");
+      // Erro de rede ou a função retornou um status não-2xx (ex: 500)
+      let errorMessage = error.message || "Ocorreu um erro de comunicação com o servidor.";
+      
+      // Tenta extrair a mensagem de erro específica do corpo da resposta da função
+      if (error.context && typeof error.context.responseText === 'string') {
+        try {
+          const errorData = JSON.parse(error.context.responseText);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // A resposta de erro não era um JSON, usamos a mensagem genérica.
+          console.error("A resposta de erro da Edge Function não era um JSON válido:", error.context.responseText);
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     if (data && data.error) {
+      // A função retornou 2xx, mas com um objeto de erro no corpo
       throw new Error(data.error);
     }
     
@@ -27,6 +43,7 @@ export const analyzeChart = async (base64Image: string, mimeType: string): Promi
         throw new Error("A resposta do servidor estava vazia. Tente novamente.");
     }
 
+    // A função retornou 2xx e dados, agora verificamos se é um erro de validação da IA
     if (data.reasoning && data.reasoning.includes("ERRO:")) {
         throw new Error(data.reasoning);
     }
