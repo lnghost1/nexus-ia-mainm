@@ -19,7 +19,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const systemInstruction = `
     Você é o NexusTrade AI, um analista financeiro sênior especializado em Price Action, Análise Técnica Institucional e Smart Money Concepts.
