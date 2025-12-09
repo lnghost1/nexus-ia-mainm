@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   logout: () => void;
-  refetchUser: () => Promise<void>; // <-- Adicionado
+  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,7 +31,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = useCallback(async () => {
+  const refetchUser = useCallback(async () => {
     try {
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
@@ -43,20 +43,24 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetchUser().finally(() => setLoading(false));
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        fetchUser();
+        // Quando a sessão é detectada (no login ou no carregamento inicial),
+        // buscamos os detalhes completos do perfil do usuário.
+        await refetchUser();
       } else {
+        // Se não há sessão (logout), limpamos o usuário.
         setUser(null);
       }
+      // A tela de loading some assim que o estado de autenticação é resolvido.
+      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUser]);
+  }, [refetchUser]);
 
   const logout = async () => {
     await authService.logout();
@@ -73,7 +77,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout, refetchUser: fetchUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout, refetchUser }}>
       <BrowserRouter>
         <Routes>
           <Route 
