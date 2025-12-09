@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, Clipboard, FileImage, CheckCircle, Lock, ExternalLink, Zap, X } from 'lucide-react';
-import { analyzeChart, fileToGenerativePart } from '../services/geminiService';
+import { analyzeChart } from '../services/geminiService';
 import { historyService } from '../services/historyService';
+import { storageService } from '../services/storageService';
+import { resizeImage } from '../utils/imageResizer';
 import { AnalysisResult, HistoryItem } from '../types';
 import { useAuth } from '../App';
 import { Link } from 'react-router-dom';
@@ -22,7 +24,6 @@ export const Dashboard: React.FC = () => {
   const KIRVANO_LINK = "https://pay.kirvano.com/e16d6c29-1f5f-491f-b3ff-e561dd625b16";
   const BROKER_LINK = "https://trade.polariumbroker.com/register?aff=753731&aff_model=revenue&afftrack=";
 
-  // Carregar histórico
   useEffect(() => {
     const loadHistory = async () => {
       if (user?.id) {
@@ -33,7 +34,6 @@ export const Dashboard: React.FC = () => {
     loadHistory();
   }, [user]);
 
-  // Listener para Colar (Ctrl+V)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (loading || result || showPaywall) return;
@@ -88,14 +88,15 @@ export const Dashboard: React.FC = () => {
     }
 
     try {
-      const base64 = await fileToGenerativePart(file);
-      const analysis = await analyzeChart(base64, file.type);
+      const { resizedFile, base64 } = await resizeImage(file);
+      const analysis = await analyzeChart(base64, 'image/jpeg');
       
       setResult(analysis);
       
+      const publicUrl = await storageService.uploadImage(resizedFile, user.id);
       const historyItem: HistoryItem = {
         id: crypto.randomUUID(),
-        imageUrl: preview, 
+        imageUrl: publicUrl, 
         result: analysis
       };
       await historyService.addToHistory(historyItem, user.id);
