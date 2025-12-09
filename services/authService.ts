@@ -3,7 +3,7 @@ import { User } from '../types';
 
 export const authService = {
   activateProPlan: async (licenseKey: string): Promise<void> => {
-    const { error } = await supabase.functions.invoke('activate-pro', {
+    const { data, error } = await supabase.functions.invoke('activate-pro', {
       body: { licenseKey },
     });
 
