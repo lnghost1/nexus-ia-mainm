@@ -15,45 +15,56 @@ export const fileToGenerativePart = async (file: File): Promise<string> => {
 };
 
 export const analyzeChart = async (base64Image: string, mimeType: string): Promise<AnalysisResult> => {
-  const { data, error } = await supabase.functions.invoke('analyze-chart', {
+  const analysisPromise = supabase.functions.invoke('analyze-chart', {
     body: { image: base64Image, mimeType },
   });
 
-  if (error) {
-    let errorMessage = "Falha na análise. Verifique sua imagem e tente novamente.";
-    if (error.context && typeof error.context.responseText === 'string') {
-        try {
-            const errorData = JSON.parse(error.context.responseText);
-            if (errorData.error) {
-                errorMessage = errorData.error;
-            }
-        } catch(e) {
-            console.error("A resposta da Edge Function 'analyze-chart' não era um JSON válido:", error.context.responseText);
-        }
-    } else {
-        errorMessage = error.message;
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("A análise está demorando mais que o esperado. O servidor pode estar sobrecarregado. Tente novamente em alguns instantes.")), 25000) // 25 segundos
+  );
+
+  try {
+    const result: any = await Promise.race([analysisPromise, timeoutPromise]);
+
+    const { data, error } = result;
+
+    // Case 1: The invoke call itself failed (network error, function not found, etc.)
+    if (error) {
+      throw new Error(error.message || "Ocorreu um erro de comunicação com o servidor.");
     }
-    throw new Error(errorMessage);
-  }
 
-  if (data.error) {
-    throw new Error(data.error);
-  }
+    // Case 2: The function executed but returned an error in its response body
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+    
+    // Case 3: The function executed but returned no data
+    if (!data) {
+        throw new Error("A resposta do servidor estava vazia. Tente novamente.");
+    }
 
-  // Tratamento de erro visual na UI se não for gráfico
-  if (data.reasoning && data.reasoning.includes("ERRO:")) {
-      throw new Error(data.reasoning);
-  }
+    // Case 4: The function returned a non-actionable "error" message in the reasoning
+    if (data.reasoning && data.reasoning.includes("ERRO:")) {
+        throw new Error(data.reasoning);
+    }
 
-  return {
-      signal: data.signal as AnalysisSignal,
-      pattern: data.pattern || "N/A",
-      trend: data.trend || "N/A",
-      riskReward: "1:2", 
-      reasoning: data.reasoning,
-      supportLevels: data.supportLevels || [],
-      resistanceLevels: data.resistanceLevels || [],
-      confidence: data.confidence || 0.9,
-      timestamp: new Date().toISOString()
-  };
+    // Success case
+    return {
+        signal: data.signal as AnalysisSignal,
+        pattern: data.pattern || "N/A",
+        trend: data.trend || "N/A",
+        riskReward: "1:2", 
+        reasoning: data.reasoning,
+        supportLevels: data.supportLevels || [],
+        resistanceLevels: data.resistanceLevels || [],
+        confidence: data.confidence || 0.9,
+        timestamp: new Date().toISOString()
+    };
+
+  } catch (err: any) {
+    // This catch block will handle the timeout from timeoutPromise,
+    // or any errors thrown from the blocks above.
+    console.error("Erro na análise do gráfico:", err);
+    throw new Error(err.message || "Um erro desconhecido ocorreu durante a análise.");
+  }
 };
