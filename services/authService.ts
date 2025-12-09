@@ -39,7 +39,7 @@ export const authService = {
   },
 
   getCurrentUser: async (): Promise<User | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getUser();
     if (!session) return null;
 
     const { user: authUser } = session;
