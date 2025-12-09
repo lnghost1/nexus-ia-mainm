@@ -292,12 +292,6 @@ export const Dashboard: React.FC = () => {
                     >
                     <FileImage size={20} /> Escolher Arquivo
                     </button>
-                    {/*<button 
-                    onClick={handlePasteButton}
-                    className="px-8 py-4 bg-nexus-card border border-nexus-border hover:border-nexus-primary text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/5"
-                    >
-                    <Clipboard size={20} /> Colar Imagem
-                    </button>*/}
                 </>
                 ) : (
                 <button 
