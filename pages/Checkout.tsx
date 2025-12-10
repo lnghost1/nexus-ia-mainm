@@ -34,6 +34,7 @@ export const Checkout: React.FC = () => {
     } catch (error: any) {
       console.error(error);
       setError(error.message || "Erro ao ativar chave.");
+    } finally {
       setLoading(false);
     }
   };
