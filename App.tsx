@@ -41,20 +41,36 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Efeito para a verificação inicial da sessão.
+  // Roda apenas uma vez quando o app é montado.
   useEffect(() => {
-    setLoading(true);
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const checkInitialSession = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.error("Erro na verificação inicial de sessão:", error);
+        setUser(null);
+      } finally {
+        // Garante que a tela de loading seja removida,
+        // independentemente do resultado da verificação.
+        setLoading(false);
+      }
+    };
+
+    checkInitialSession();
+  }, []); // O array vazio garante que isso rode apenas uma vez.
+
+  // Efeito para ouvir mudanças no estado de autenticação (login, logout).
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Se o estado mudou (ex: usuário fez login em outra aba),
+      // atualizamos o estado do usuário.
       if (session) {
-        // Quando a sessão é detectada (no login ou no carregamento inicial),
-        // buscamos os detalhes completos do perfil do usuário.
-        await refetchUser();
+        refetchUser();
       } else {
-        // Se não há sessão (logout), limpamos o usuário.
         setUser(null);
       }
-      // A tela de loading some assim que o estado de autenticação é resolvido.
-      setLoading(false);
     });
 
     return () => {
