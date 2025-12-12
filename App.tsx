@@ -5,7 +5,6 @@ import { Dashboard } from './pages/Dashboard';
 import { Learning } from './pages/Learning';
 import { Ranking } from './pages/Ranking';
 import { Community } from './pages/Community';
-import { Checkout } from './pages/Checkout';
 import { Layout } from './components/Layout';
 import { User } from './types';
 import { authService } from './services/authService';
@@ -114,16 +113,6 @@ const App: React.FC = () => {
                 <Layout>
                   <Dashboard />
                 </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
-           <Route 
-            path="/checkout" 
-            element={
-              user ? (
-                <Checkout />
               ) : (
                 <Navigate to="/login" replace />
               )

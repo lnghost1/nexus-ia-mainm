@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, LayoutDashboard, BookOpen, Menu, X, Trophy, Users, Crown, Zap, ExternalLink } from 'lucide-react';
+import { LogOut, LayoutDashboard, BookOpen, Menu, X, Trophy, Users, Zap, ExternalLink } from 'lucide-react';
 import { useAuth } from '../App';
 import { Link, useLocation } from 'react-router-dom';
 import { Logo } from './Logo';
@@ -71,31 +71,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                </a>
             </div>
 
-            {/* Plan Status Card */}
-            {user?.plan === 'free' && (
-                <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-center">
-                    <div className="text-xs text-gray-400 mb-2">Plano Grátis</div>
-                    <Link to="/checkout" className="block w-full bg-nexus-primary text-black text-xs font-bold py-2 rounded hover:bg-nexus-400 transition-colors">
-                        Fazer Upgrade
-                    </Link>
-                </div>
-            )}
-
             <div className="border-t border-nexus-border pt-4">
                 <div className="flex items-center gap-3 mb-4 px-2">
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-nexus-primary to-nexus-800 flex items-center justify-center text-sm font-bold text-white shadow-lg relative">
                     {user?.name?.charAt(0).toUpperCase()}
-                    {user?.plan === 'pro' && (
-                        <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5">
-                            <Crown size={8} className="text-black" fill="black" />
-                        </div>
-                    )}
                     </div>
                     <div className="flex-1 overflow-hidden">
                     <p className="text-sm font-bold truncate text-white">{user?.name}</p>
                     <p className="text-[10px] text-nexus-primary flex items-center gap-1 uppercase font-bold">
-                        <span className={`w-1.5 h-1.5 rounded-full ${user?.plan === 'pro' ? 'bg-yellow-500' : 'bg-nexus-primary'} animate-pulse`}></span>
-                        {user?.plan === 'pro' ? 'Trader Pro' : 'Membro Free'}
+                        <span className={`w-1.5 h-1.5 rounded-full bg-nexus-primary animate-pulse`}></span>
+                        Membro
                     </p>
                     </div>
                 </div>
@@ -134,12 +119,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <BookOpen size={20} />
               <span>Aprendizado</span>
             </Link>
-            {user?.plan === 'free' && (
-                <Link to="/checkout" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-nexus-primary text-black font-bold mt-4">
-                    <Crown size={20} />
-                    <span>Virar PRO</span>
-                </Link>
-            )}
              <a 
                  href={BROKER_LINK}
                  target="_blank"

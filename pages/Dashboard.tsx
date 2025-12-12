@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, Clipboard, FileImage, CheckCircle, Lock, ExternalLink, Zap, X } from 'lucide-react';
+import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, FileImage, CheckCircle, ExternalLink, Zap } from 'lucide-react';
 import { analyzeChart } from '../services/geminiService';
 import { historyService } from '../services/historyService';
 import { storageService } from '../services/storageService';
 import { resizeImage } from '../utils/imageResizer';
 import { AnalysisResult, HistoryItem } from '../types';
 import { useAuth } from '../App';
-import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -17,11 +16,8 @@ export const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const isPro = user?.plan === 'pro';
-  const KIRVANO_LINK = "https://pay.kirvano.com/e16d6c29-1f5f-491f-b3ff-e561dd625b16";
   const BROKER_LINK = "https://trade.polariumbroker.com/register?aff=753731&aff_model=revenue&afftrack=";
 
   useEffect(() => {
@@ -36,7 +32,7 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      if (loading || result || showPaywall) return;
+      if (loading || result) return;
 
       if (e.clipboardData && e.clipboardData.items) {
         const items = e.clipboardData.items;
@@ -53,7 +49,7 @@ export const Dashboard: React.FC = () => {
     };
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [loading, result, showPaywall]);
+  }, [loading, result]);
 
   const handleFileSelect = (selectedFile: File) => {
     if (selectedFile.type.startsWith('image/')) {
@@ -79,13 +75,6 @@ export const Dashboard: React.FC = () => {
 
     setLoading(true);
     setError(null);
-
-    if (!isPro) {
-        await new Promise(r => setTimeout(r, 2500)); 
-        setLoading(false);
-        setShowPaywall(true);
-        return;
-    }
 
     try {
       const { resizedFile, base64 } = await resizeImage(file);
@@ -118,70 +107,9 @@ export const Dashboard: React.FC = () => {
     setError(null);
   };
 
-  const handlePasteButton = async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const item of clipboardItems) {
-        const imageTypes = item.types.filter(type => type.startsWith('image/'));
-        for (const type of imageTypes) {
-          const blob = await item.getType(type);
-          const file = new File([blob], "pasted-image.png", { type });
-          handleFileSelect(file);
-          return;
-        }
-      }
-      setError("Nenhuma imagem encontrada na área de transferência.");
-    } catch (err) {
-      setError("Permissão para colar negada ou erro ao ler área de transferência.");
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto pb-20 relative">
       
-      {showPaywall && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-             <div className="bg-[#0A0A0A] border border-nexus-primary/50 rounded-2xl p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(0,229,153,0.2)]">
-                <button 
-                    onClick={() => setShowPaywall(false)} 
-                    className="absolute top-4 right-4 text-gray-500 hover:text-white"
-                >
-                    <X size={24} />
-                </button>
-
-                <div className="flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 shadow-2xl border border-white/10 animate-bounce">
-                        <Lock size={40} className="text-nexus-primary" />
-                    </div>
-                    
-                    <h3 className="text-2xl font-bold text-white mb-2">Análise Concluída</h3>
-                    <p className="text-nexus-primary font-bold uppercase text-xs tracking-widest mb-4">Sinal de entrada detectado</p>
-                    
-                    <p className="text-gray-300 mb-8 leading-relaxed">
-                        A Inteligência Artificial identificou uma oportunidade neste gráfico. Para revelar o sinal (Compra/Venda) e os alvos, você precisa ativar sua chave de acesso.
-                    </p>
-                    
-                    <div className="flex flex-col gap-3 w-full">
-                        <a 
-                            href={KIRVANO_LINK} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="w-full bg-nexus-primary hover:bg-nexus-400 text-black font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,229,153,0.3)] hover:scale-105"
-                        >
-                            Comprar Acesso Agora <ExternalLink size={18} />
-                        </a>
-                        <Link 
-                            to="/checkout"
-                            className="text-sm text-gray-400 hover:text-white underline decoration-nexus-primary/50 underline-offset-4 mt-2"
-                        >
-                            Já tenho uma chave de acesso
-                        </Link>
-                    </div>
-                </div>
-             </div>
-        </div>
-      )}
-
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-nexus-border pb-4 gap-4">
         <div>
            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -416,7 +344,7 @@ export const Dashboard: React.FC = () => {
         </a>
       </div>
 
-      {history.length > 0 && !result && isPro && (
+      {history.length > 0 && !result && (
         <div className="mt-20">
            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <CheckCircle className="text-nexus-muted" /> Histórico Recente
