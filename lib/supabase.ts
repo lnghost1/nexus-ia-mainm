@@ -1,12 +1,33 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Helper para ler variáveis de ambiente de forma segura
+const getEnv = (key: string) => {
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+      // @ts-ignore
+      return String(import.meta.env[key]).trim();
+    }
+  } catch (e) {}
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("ERRO CRÍTICO: VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não foram encontradas.");
-  console.error("Verifique suas Variáveis de Ambiente no painel da Vercel.");
-  throw new Error("Configuração do Supabase incompleta. O deploy irá falhar até que as variáveis sejam corrigidas na Vercel.");
-}
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      // @ts-ignore
+      return String(process.env[key]).trim();
+    }
+  } catch (e) {}
+  
+  return '';
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Usa valores "placeholder" se as chaves não existirem, evitando que o app quebre ao iniciar.
+// Os serviços (authService, historyService) verificam se é placeholder antes de tentar usar.
+const supabaseUrl = (getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL') || 'https://placeholder.supabase.co').trim();
+const supabaseKey = (getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY') || 'placeholder-key').trim();
+
+export const isSupabaseConfigured = () => {
+  return !!supabaseUrl && !!supabaseKey && !supabaseUrl.includes('placeholder') && !supabaseKey.includes('placeholder');
+};
+
+export const supabase = createClient(supabaseUrl, supabaseKey);

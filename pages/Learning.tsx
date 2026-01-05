@@ -1,49 +1,90 @@
-import React from 'react';
-import { Play, BookOpen, Lock } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Play, BookOpen, Lock, X } from 'lucide-react';
 
 export const Learning: React.FC = () => {
-  const tutorials = [
+  type Lesson = {
+    id: string;
+    title: string;
+    embedUrl: string;
+  };
+
+  type Course = {
+    id: string;
+    title: string;
+    description: string;
+    level: 'Iniciante' | 'Intermediário' | 'Avançado';
+    image: string;
+    locked: boolean;
+    lessons: Lesson[];
+  };
+
+  const courses: Course[] = useMemo(() => ([
     {
-      id: 1,
-      title: "Introdução ao NexusTrade",
-      duration: "05:20",
-      level: "Iniciante",
-      image: "https://images.unsplash.com/photo-1611974765270-ca12586343bb?w=500&auto=format&fit=crop&q=60",
-      locked: false
+      id: 'course_welcome',
+      title: 'Vídeo de Boas-Vindas',
+      description: 'Assista ao vídeo introdutório da plataforma',
+      level: 'Iniciante',
+      image: 'https://img.youtube.com/vi/PCDL7_nldVA/hqdefault.jpg',
+      locked: false,
+      lessons: [
+        {
+          id: 'w1',
+          title: 'Vídeo de Boas-Vindas',
+          embedUrl: 'https://www.youtube.com/embed/PCDL7_nldVA?si=jgUzreAlq6h0myHF',
+        },
+      ]
     },
     {
-      id: 2,
-      title: "Como identificar Suporte e Resistência",
-      duration: "12:45",
-      level: "Iniciante",
-      image: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=500&auto=format&fit=crop&q=60",
-      locked: false
+      id: 'course_platform',
+      title: 'COMO FAZER AS OPERAÇÕES, COMO ANALISAR GRÁFICOS',
+      description: 'Aprenda a navegar e usar todos os recursos da plataforma.',
+      level: 'Iniciante',
+      image: 'https://img.youtube.com/vi/knYLKNDxOTk/hqdefault.jpg',
+      locked: false,
+      lessons: [
+        {
+          id: 'p1',
+          title: 'COMO FAZER AS OPERAÇÕES, COMO ANALISAR GRÁFICOS',
+          embedUrl: 'https://www.youtube.com/embed/knYLKNDxOTk?si=63sSyBWjXut1xTn5',
+        },
+      ]
     },
     {
-      id: 3,
-      title: "Padrões de Candlestick e Gatilhos",
-      duration: "18:10",
-      level: "Intermediário",
-      image: "https://images.unsplash.com/photo-1535320903710-d9cf11df87b6?w=500&auto=format&fit=crop&q=60",
-      locked: false
+      id: 'course_at',
+      title: 'COMO FAZER O CADASTRO NA CORRETORA',
+      description: 'Domine os conceitos básicos e avançados de análise técnica.',
+      level: 'Intermediário',
+      image: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=900&auto=format&fit=crop&q=60',
+      locked: false,
+      lessons: [
+        {
+          id: 'a1',
+          title: 'COMO FAZER O CADASTRO NA CORRETORA',
+          embedUrl: 'https://www.youtube.com/embed/CpurpGANMKs?si=Rq-oI2To1CRnpkVh',
+        },
+      ]
     },
-    {
-      id: 4,
-      title: "Gerenciamento de Risco Profissional",
-      duration: "25:00",
-      level: "Avançado",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=60",
-      locked: true
-    },
-    {
-      id: 5,
-      title: "Psicologia do Trader",
-      duration: "15:30",
-      level: "Todos",
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=60",
-      locked: true
-    }
-  ];
+  ]), []);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalLessons, setModalLessons] = useState<Lesson[]>([]);
+  const [activeEmbedUrl, setActiveEmbedUrl] = useState('');
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setActiveEmbedUrl('');
+    setModalLessons([]);
+    setModalTitle('');
+  };
+
+  const openCourse = (course: Course) => {
+    if (course.locked) return;
+    setModalTitle(course.title);
+    setModalLessons(course.lessons);
+    setActiveEmbedUrl(course.lessons[0]?.embedUrl || '');
+    setModalOpen(true);
+  };
 
   return (
     <div className="max-w-5xl mx-auto pb-20">
@@ -55,17 +96,84 @@ export const Learning: React.FC = () => {
         <p className="text-nexus-muted text-sm mt-1">Domine a plataforma e melhore seus resultados.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tutorials.map((video) => (
-          <div key={video.id} className="glass-panel rounded-xl overflow-hidden group hover:border-nexus-primary/40 transition-all cursor-pointer">
+      {modalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#0A0A0A] border border-nexus-border rounded-2xl w-full max-w-5xl overflow-hidden">
+            <div className="p-4 border-b border-nexus-border flex items-center justify-between">
+              <div className="text-white font-bold">{modalTitle}</div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="p-2 rounded-lg hover:bg-white/5 text-gray-300"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid lg:grid-cols-[320px_1fr]">
+              <div className="border-b lg:border-b-0 lg:border-r border-nexus-border max-h-[70vh] overflow-auto">
+                {modalLessons.length > 0 ? (
+                  <div className="p-3 space-y-2">
+                    {modalLessons.map((lesson, idx) => (
+                      <button
+                        key={lesson.id}
+                        type="button"
+                        onClick={() => setActiveEmbedUrl(lesson.embedUrl)}
+                        className={`w-full text-left px-3 py-3 rounded-xl border transition-colors ${
+                          activeEmbedUrl === lesson.embedUrl
+                            ? 'border-nexus-primary/50 bg-nexus-primary/10 text-white'
+                            : 'border-nexus-border bg-transparent text-gray-300 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="text-xs text-gray-500 mb-1">Aula {idx + 1}</div>
+                        <div className="font-medium">{lesson.title}</div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-sm text-gray-400">Assista ao vídeo.</div>
+                )}
+              </div>
+
+              <div className="p-4">
+                <div className="w-full aspect-video rounded-xl overflow-hidden border border-nexus-border bg-black">
+                  {activeEmbedUrl ? (
+                    <iframe
+                      src={activeEmbedUrl}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      title={modalTitle}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-500">
+                      Sem link configurado.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+        {courses.map((course) => (
+          <div
+            key={course.id}
+            className="glass-panel rounded-xl overflow-hidden group hover:border-nexus-primary/40 transition-all cursor-pointer"
+            onClick={() => openCourse(course)}
+          >
             <div className="h-40 relative overflow-hidden">
               <img 
-                src={video.image} 
-                alt={video.title} 
-                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${video.locked ? 'grayscale opacity-40' : ''}`} 
+                src={course.image} 
+                alt={course.title} 
+                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${course.locked ? 'grayscale opacity-40' : ''}`} 
               />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                {video.locked ? (
+                {course.locked ? (
                   <Lock className="text-gray-400" size={32} />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-nexus-primary/90 flex items-center justify-center text-black">
@@ -73,29 +181,30 @@ export const Learning: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-2 right-2 bg-black/70 text-xs px-2 py-1 rounded text-white font-mono">
-                {video.duration}
-              </div>
             </div>
             
             <div className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                  video.level === 'Iniciante' ? 'bg-green-900/50 text-green-400' :
-                  video.level === 'Intermediário' ? 'bg-yellow-900/50 text-yellow-400' :
+                  course.level === 'Iniciante' ? 'bg-green-900/50 text-green-400' :
+                  course.level === 'Intermediário' ? 'bg-yellow-900/50 text-yellow-400' :
                   'bg-red-900/50 text-red-400'
                 }`}>
-                  {video.level}
+                  {course.level}
                 </span>
-                {video.locked && <Lock size={14} className="text-gray-500" />}
+                {course.locked && <Lock size={14} className="text-gray-500" />}
               </div>
               
-              <h3 className={`font-medium leading-tight mb-2 ${video.locked ? 'text-gray-500' : 'text-gray-100 group-hover:text-nexus-primary transition-colors'}`}>
-                {video.title}
+              <h3 className={`font-medium leading-tight mb-2 ${course.locked ? 'text-gray-500' : 'text-gray-100 group-hover:text-nexus-primary transition-colors'}`}>
+                {course.title}
               </h3>
+
+              <p className="text-xs text-nexus-muted mb-2">
+                {course.description}
+              </p>
               
               <p className="text-xs text-nexus-muted">
-                {video.locked ? 'Disponível no plano Master' : 'Assista agora para melhorar suas skills.'}
+                {course.locked ? 'Disponível no plano Master' : `${course.lessons.length} vídeos`}
               </p>
             </div>
           </div>

@@ -1,11 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, FileImage, CheckCircle, ExternalLink, Zap } from 'lucide-react';
-import { analyzeChart } from '../services/geminiService';
+import { UploadCloud, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, Trash2, Activity, Crosshair, Clipboard, FileImage, CheckCircle, Lock, ExternalLink, Zap, X } from 'lucide-react';
+import { analyzeChart, fileToGenerativePart } from '../services/geminiService';
 import { historyService } from '../services/historyService';
-import { storageService } from '../services/storageService';
-import { resizeImage } from '../utils/imageResizer';
 import { AnalysisResult, HistoryItem } from '../types';
 import { useAuth } from '../App';
+import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -16,23 +16,26 @@ export const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false); // Estado para controlar o modal de bloqueio
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const BROKER_LINK = "https://trade.polariumbroker.com/register?aff=753731&aff_model=revenue&afftrack=";
+  const isPro = user?.plan === 'pro';
+  const KIRVANO_LINK = "https://pay.kirvano.com/e16d6c29-1f5f-491f-b3ff-e561dd625b16";
+  const BROKER_LINK = "https://trionbroker.io/partner/12742";
 
+  // Carregar histórico
   useEffect(() => {
     const loadHistory = async () => {
-      if (user?.id) {
-        const items = await historyService.getHistory(user.id);
-        setHistory(items);
-      }
+      const items = await historyService.getHistory();
+      setHistory(items);
     };
     loadHistory();
   }, [user]);
 
+  // Listener para Colar (Ctrl+V)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      if (loading || result) return;
+      if (loading || result || showPaywall) return;
 
       if (e.clipboardData && e.clipboardData.items) {
         const items = e.clipboardData.items;
@@ -49,11 +52,18 @@ export const Dashboard: React.FC = () => {
     };
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [loading, result]);
+  }, [loading, result, showPaywall]);
 
   const handleFileSelect = (selectedFile: File) => {
+    if (selectedFile.size > 6 * 1024 * 1024) {
+      setError('Imagem muito grande. Envie um print menor (até 6MB).');
+      return;
+    }
     if (selectedFile.type.startsWith('image/')) {
       setFile(selectedFile);
+      if (preview) {
+        try { URL.revokeObjectURL(preview); } catch (e) {}
+      }
       setPreview(URL.createObjectURL(selectedFile));
       setError(null);
     } else {
@@ -71,25 +81,29 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!file || !preview || !user?.id) return;
+    if (!file || !preview) return;
 
     setLoading(true);
     setError(null);
 
+    // LÓGICA DE BLOQUEIO PÓS-CLICK (SIMULAÇÃO)
+    if (!isPro) {
+        // Simula o tempo de análise da IA para gerar expectativa
+        await new Promise(r => setTimeout(r, 2500)); 
+        
+        setLoading(false);
+        setShowPaywall(true); // Exibe o modal de bloqueio
+        return;
+    }
+
     try {
-      const { resizedFile, base64 } = await resizeImage(file);
-      const analysis = await analyzeChart(base64, 'image/jpeg');
+      const base64 = await fileToGenerativePart(file);
+      const analysis = await analyzeChart(base64, file.type);
       
       setResult(analysis);
       
-      const publicUrl = await storageService.uploadImage(resizedFile, user.id);
-      const historyItem: HistoryItem = {
-        id: crypto.randomUUID(),
-        imageUrl: publicUrl, 
-        result: analysis
-      };
-      await historyService.addToHistory(historyItem, user.id);
-      const updatedHistory = await historyService.getHistory(user.id);
+      await historyService.addAnalysis(file, analysis);
+      const updatedHistory = await historyService.getHistory();
       setHistory(updatedHistory);
 
     } catch (err: any) {
@@ -101,15 +115,80 @@ export const Dashboard: React.FC = () => {
   };
 
   const reset = () => {
+    if (preview) {
+      try { URL.revokeObjectURL(preview); } catch (e) {}
+    }
     setFile(null);
     setPreview(null);
     setResult(null);
     setError(null);
   };
 
+  const handlePasteButton = async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        const imageTypes = item.types.filter(type => type.startsWith('image/'));
+        for (const type of imageTypes) {
+          const blob = await item.getType(type);
+          const file = new File([blob], "pasted-image.png", { type });
+          handleFileSelect(file);
+          return;
+        }
+      }
+      setError("Nenhuma imagem encontrada na área de transferência.");
+    } catch (err) {
+      setError("Permissão para colar negada ou erro ao ler área de transferência.");
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto pb-20 relative">
       
+      {/* MODAL PAYWALL (Aparece apenas quando o usuário Free tenta analisar) */}
+      {showPaywall && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+             <div className="bg-[#0A0A0A] border border-nexus-primary/50 rounded-2xl p-8 max-w-md w-full relative shadow-[0_0_50px_rgba(0,229,153,0.2)]">
+                <button 
+                    onClick={() => setShowPaywall(false)} 
+                    className="absolute top-4 right-4 text-gray-500 hover:text-white"
+                >
+                    <X size={24} />
+                </button>
+
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6 shadow-2xl border border-white/10 animate-bounce">
+                        <Lock size={40} className="text-nexus-primary" />
+                    </div>
+                    
+                    <h3 className="text-2xl font-bold text-white mb-2">Análise Concluída</h3>
+                    <p className="text-nexus-primary font-bold uppercase text-xs tracking-widest mb-4">Sinal de entrada detectado</p>
+                    
+                    <p className="text-gray-300 mb-8 leading-relaxed">
+                        A Inteligência Artificial identificou uma oportunidade neste gráfico. Para revelar o sinal (Compra/Venda) e os alvos, você precisa ativar sua chave de acesso.
+                    </p>
+                    
+                    <div className="flex flex-col gap-3 w-full">
+                        <a 
+                            href={KIRVANO_LINK} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full bg-nexus-primary hover:bg-nexus-400 text-black font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,229,153,0.3)] hover:scale-105"
+                        >
+                            Comprar Acesso Agora <ExternalLink size={18} />
+                        </a>
+                        <Link 
+                            to="/checkout"
+                            className="text-sm text-gray-400 hover:text-white underline decoration-nexus-primary/50 underline-offset-4 mt-2"
+                        >
+                            Já tenho uma chave de acesso
+                        </Link>
+                    </div>
+                </div>
+             </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-nexus-border pb-4 gap-4">
         <div>
            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -129,10 +208,11 @@ export const Dashboard: React.FC = () => {
       {!result ? (
         <div className="animate-fade-in">
           
+          {/* ÁREA DE UPLOAD */}
           <div 
             className={`
               relative group
-              min-h-[450px] flex flex-col items-center justify-center
+              min-h-[320px] sm:min-h-[450px] flex flex-col items-center justify-center
               rounded-3xl border-2 border-dashed transition-all duration-300 overflow-hidden
               ${isDragging 
                     ? 'border-nexus-primary bg-nexus-primary/5 scale-[1.01] cursor-pointer' 
@@ -151,14 +231,18 @@ export const Dashboard: React.FC = () => {
                  <div className="w-20 h-20 bg-nexus-card rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl border border-white/5 group-hover:border-nexus-primary/30 transition-colors">
                     <UploadCloud size={40} className="text-nexus-muted group-hover:text-nexus-primary transition-colors" />
                  </div>
-                 <h3 className="text-2xl font-bold text-white mb-3">Enviar Gráfico para Análise</h3>
+                 <h3 className="text-xl sm:text-2xl font-bold text-white mb-3">Enviar Gráfico para Análise</h3>
                  <p className="text-gray-400 max-w-md mx-auto mb-2">
-                   Arraste e solte a captura de tela do seu gráfico aqui, clique para procurar arquivos, ou pressione <kbd className="bg-white/10 px-2 py-1 rounded text-white font-mono text-xs">Ctrl+V</kbd> para colar.
+                   Arraste ou selecione o print do gráfico da sua corretora para análise.
+                 </p>
+                 <p className="text-gray-400 max-w-md mx-auto mb-2">
+                   Cole seu print da corretora
                  </p>
                  <p className="text-nexus-primary text-sm font-medium mt-4">
                    Dica: Foque nas últimas 20 velas para maior precisão.
                  </p>
                  
+                 {/* Visual de Gráfico Exemplo (CSS/SVG) */}
                  <div className="mt-10 relative w-64 mx-auto pointer-events-none select-none">
                     <div className="absolute inset-0 bg-nexus-primary/20 blur-[40px] rounded-full opacity-20"></div>
                     <div className="bg-[#050505] border border-nexus-border rounded-lg p-2 shadow-2xl relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
@@ -208,9 +292,11 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
             
+            {/* Click handler for the whole area if no preview */}
             {!preview && <div className="absolute inset-0 z-0" onClick={() => fileInputRef.current?.click()} />}
           </div>
 
+          {/* BOTÕES DE AÇÃO - VISÍVEIS PARA TODOS AGORA */}
           <div className="flex flex-col md:flex-row gap-4 mt-8 justify-center">
                 {!preview ? (
                 <>
@@ -219,6 +305,12 @@ export const Dashboard: React.FC = () => {
                     className="px-8 py-4 bg-nexus-primary hover:bg-nexus-400 text-black font-bold rounded-xl flex items-center justify-center gap-3 transition-all hover:scale-105 shadow-[0_0_20px_rgba(0,229,153,0.3)]"
                     >
                     <FileImage size={20} /> Escolher Arquivo
+                    </button>
+                    <button 
+                    onClick={handlePasteButton}
+                    className="px-8 py-4 bg-nexus-card border border-nexus-border hover:border-nexus-primary text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-white/5"
+                    >
+                    <Clipboard size={20} /> Colar Imagem
                     </button>
                 </>
                 ) : (
@@ -234,7 +326,7 @@ export const Dashboard: React.FC = () => {
                         </>
                     ) : (
                         <>
-                        <Activity size={20} /> ANALISAR PRICE ACTION
+                        <Activity size={20} /> VER ANALISE
                         </>
                     )}
                 </button>
@@ -245,6 +337,7 @@ export const Dashboard: React.FC = () => {
         <div className="animate-fade-in space-y-6">
           
           <div className="flex flex-col md:flex-row gap-4 items-stretch">
+            {/* VEREDITO PRINCIPAL */}
             <div className={`flex-1 p-6 rounded-2xl border flex flex-col justify-center items-center text-center shadow-[0_0_30px_rgba(0,0,0,0.3)] ${
               result.signal === 'BUY' ? 'bg-nexus-primary/10 border-nexus-primary/50 shadow-[0_0_20px_rgba(0,229,153,0.15)]' : 
               result.signal === 'SELL' ? 'bg-nexus-danger/10 border-nexus-danger/50 shadow-[0_0_20px_rgba(255,41,80,0.15)]' : 
@@ -323,6 +416,7 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* BANNER DE AFILIAÇÃO CORRETORA */}
       <div className="mt-12 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none"></div>
         <div className="relative z-10 text-center md:text-left">
@@ -344,7 +438,8 @@ export const Dashboard: React.FC = () => {
         </a>
       </div>
 
-      {history.length > 0 && !result && (
+      {/* HISTÓRICO DE ANÁLISES */}
+      {history.length > 0 && !result && isPro && (
         <div className="mt-20">
            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <CheckCircle className="text-nexus-muted" /> Histórico Recente
@@ -353,7 +448,19 @@ export const Dashboard: React.FC = () => {
               {history.map((item) => (
                 <div key={item.id} className="glass-panel rounded-xl overflow-hidden group hover:border-nexus-primary/30 transition-all">
                    <div className="h-32 bg-black relative">
-                      <img src={item.imageUrl} className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" alt="Histórico" />
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity"
+                          alt="Histórico"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                          Sem imagem
+                        </div>
+                      )}
                       <div className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                         item.result.signal === 'BUY' ? 'bg-green-500 text-black' : 
                         item.result.signal === 'SELL' ? 'bg-red-500 text-white' : 

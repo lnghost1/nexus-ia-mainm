@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useContext, createContext, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+import React, { useState, useEffect, useContext, createContext } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Learning } from './pages/Learning';
 import { Ranking } from './pages/Ranking';
 import { Community } from './pages/Community';
+import { Checkout } from './pages/Checkout';
 import { Layout } from './components/Layout';
-import { User } from './types';
+import { User, AuthState } from './types';
 import { authService } from './services/authService';
 import { supabase } from './lib/supabase';
 
 // Auth Context
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
+interface AuthContextType extends AuthState {
+  login: (e: string, p: string) => Promise<void>;
+  register: (n: string, e: string, p: string) => Promise<void>;
   logout: () => void;
-  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,56 +27,88 @@ export const useAuth = () => {
   return context;
 };
 
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any) {
+    console.error('App crashed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-white p-6 text-center">
+          <div className="text-nexus-primary font-black tracking-widest mb-2">NEXUSTRADE</div>
+          <div className="text-lg font-bold mb-2">O app encontrou um erro</div>
+          <div className="text-sm text-gray-400 mb-6">Toque no botão abaixo para recarregar.</div>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-nexus-primary hover:bg-nexus-400 text-black font-bold rounded-xl"
+          >
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refetchUser = useCallback(async () => {
-    try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Erro ao buscar usuário:", error);
-      setUser(null);
-    }
-  }, []);
-
-  // Efeito para a verificação inicial da sessão.
-  // Roda apenas uma vez quando o app é montado.
   useEffect(() => {
-    const checkInitialSession = async () => {
+    // 1. Verificar sessão inicial
+    const initAuth = async () => {
       try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Erro na verificação inicial de sessão:", error);
-        setUser(null);
+        const u = await authService.getCurrentUser();
+        setUser(u);
+      } catch (e) {
+        console.error(e);
       } finally {
-        // Garante que a tela de loading seja removida,
-        // independentemente do resultado da verificação.
         setLoading(false);
       }
     };
+    initAuth();
 
-    checkInitialSession();
-  }, []); // O array vazio garante que isso rode apenas uma vez.
-
-  // Efeito para ouvir mudanças no estado de autenticação (login, logout).
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Se o estado mudou (ex: usuário fez login em outra aba),
-      // atualizamos o estado do usuário.
-      if (session) {
-        refetchUser();
-      } else {
-        setUser(null);
+    // 2. Escutar mudanças (Supabase)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata.name || 'Trader',
+          plan: (session.user.app_metadata as any)?.plan || session.user.user_metadata.plan || 'free'
+        });
+      } else if (event === 'SIGNED_OUT') {
+        // Handled by logout manually to clear localstorage mock
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [refetchUser]);
+  }, []);
+
+  const login = async (email: string, pass: string) => {
+    const loggedUser = await authService.login(email, pass);
+    setUser(loggedUser);
+  };
+
+  const register = async (name: string, email: string, pass: string) => {
+    const registeredUser = await authService.register(name, email, pass);
+    setUser(registeredUser);
+  };
 
   const logout = async () => {
     await authService.logout();
@@ -92,71 +125,81 @@ const App: React.FC = () => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout, refetchUser }}>
-      <BrowserRouter>
-        <Routes>
-          <Route 
-            path="/" 
-            element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}
-          />
-          
-          <Route 
-            path="/login" 
-            element={!user ? <Login /> : <Navigate to="/dashboard" replace />} 
-          />
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout }}>
+      <ErrorBoundary>
+        <HashRouter>
+          <Routes>
+            {/* Root redirect logic: If user is logged in -> Dashboard, else -> Login will be handled by protected route logic or explicit redirect */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            <Route 
+              path="/login" 
+              element={!user ? <Login /> : <Navigate to="/dashboard" replace />} 
+            />
 
-          {/* Rotas Protegidas */}
-          <Route 
-            path="/dashboard" 
-            element={
-              user ? (
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
-          <Route 
-            path="/learning" 
-            element={
-              user ? (
-                <Layout>
-                  <Learning />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
-          <Route 
-            path="/ranking" 
-            element={
-              user ? (
-                <Layout>
-                  <Ranking />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
-          <Route 
-            path="/community" 
-            element={
-              user ? (
-                <Layout>
-                  <Community />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Protected Routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                user ? (
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+             <Route 
+              path="/checkout" 
+              element={
+                user ? (
+                  <Checkout />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/learning" 
+              element={
+                user ? (
+                  <Layout>
+                    <Learning />
+                  </Layout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/ranking" 
+              element={
+                user ? (
+                  <Layout>
+                    <Ranking />
+                  </Layout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/community" 
+              element={
+                user ? (
+                  <Layout>
+                    <Community />
+                  </Layout>
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
+      </ErrorBoundary>
     </AuthContext.Provider>
   );
 };
